@@ -11,25 +11,62 @@
   var search = window.location.search || '';
   var hash = window.location.hash || '';
   var appScheme = 'mwdat-993203363455548://' + window.location.pathname;
+  var fallbackTimer = null;
+  var opened = false;
   if (search) appScheme += search;
   if (hash) appScheme += hash;
 
-  window.location.replace(appScheme);
-
-  setTimeout(function() {
+  function showManualFallback() {
+    if (opened) return;
     document.getElementById('status').textContent =
-      'If OpenGlasses did not open, make sure the app is installed and try again.';
+      'Safari may require a tap. If the app did not open automatically, tap the button below.';
     document.getElementById('manual').style.display = 'block';
     document.getElementById('manual-link').href = appScheme;
-  }, 2000);
+  }
+
+  function cancelFallback() {
+    opened = true;
+    if (fallbackTimer) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+  }
+
+  function tryOpenApp() {
+    window.location.href = appScheme;
+  }
+
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+      cancelFallback();
+    }
+  });
+
+  window.addEventListener('pagehide', cancelFallback);
+  window.addEventListener('blur', function() {
+    setTimeout(cancelFallback, 250);
+  });
+
+  window.addEventListener('load', function() {
+    var manualLink = document.getElementById('manual-link');
+    manualLink.href = appScheme;
+    manualLink.addEventListener('click', function() {
+      tryOpenApp();
+    });
+
+    tryOpenApp();
+    setTimeout(tryOpenApp, 800);
+    fallbackTimer = setTimeout(showManualFallback, 1800);
+  });
 })();
 </script>
 </head>
 <body style="font-family: -apple-system, sans-serif; text-align: center; padding: 60px 20px;">
   <h2>Redirecting to OpenGlasses...</h2>
-  <p id="status">Opening the app...</p>
+  <p id="status">Trying to open the app...</p>
   <div id="manual" style="display:none; margin-top: 20px;">
     <a id="manual-link" href="#" style="display:inline-block; padding: 12px 24px; background: #007AFF; color: white; border-radius: 8px; text-decoration: none;">Open OpenGlasses</a>
+    <p style="color:#666; margin-top:16px;">If Safari stays open after tapping, return to the app manually and try the pairing step again.</p>
   </div>
 </body>
 </html>
